@@ -140,11 +140,10 @@ go_bandit([]() {
             auto va = input_begin<4>(begin(values));
             auto vb = input_begin<4>(begin(values) + 16);
 
-            floki::detail::merge_sort(va, vb, vo, 4);
-
             auto sorted_values = values;
+            std::sort(begin(sorted_values), end(sorted_values));
 
-            std::sort(sorted_values.begin(), sorted_values.end());
+            floki::detail::merge_sort(va, vb, vo, 4);
 
             AssertThat(values, EqualsContainer(sorted_values));
         });
