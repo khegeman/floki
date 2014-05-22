@@ -22,7 +22,6 @@ std::vector<int32_t> values
 
 floki::sort(begin(values),end(values));
 
-
 ```
 
 ## Tested With
@@ -34,6 +33,7 @@ There are some known issues with g++ and Boost SIMD.  See the comments about ali
 
 ```
  -fno-strict-aliasing -DBOOST_SIMD_NO_STRICT_ALIASING
+
  ```
 
 
@@ -44,3 +44,19 @@ There are some known issues with g++ and Boost SIMD.  See the comments about ali
 [Boost](http://boost.org)
 
 [Boost SIMD](http://nt2.metascale.fr/doc/html/the_boost_simd_library.html)
+
+
+## Benchmark
+
+
+```
+Intel(R) Core(TM) i7-4770S CPU @ 3.10GHz
+
+```
+
+65536 elements in std::vector
+
+data type  | std::sort | floki aa sort
+------------- | ------------- | -------------
+int32_t  | 2.99ms | 0.92ms
+float    | 3.33ms | 1.10ms
