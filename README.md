@@ -52,9 +52,11 @@ There are some known issues with g++ and Boost SIMD.  See the comments about ali
 ```
 Intel(R) Core(TM) i7-4770S CPU @ 3.10GHz
 
+compiled with clang 3.4 and flags -O3 -mavx
 ```
 
-65536 elements in std::vector
+65536 random elements in std::vector
+
 
 data type  | std::sort | floki aa sort
 ------------- | ------------- | -------------
