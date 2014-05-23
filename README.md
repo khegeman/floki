@@ -58,7 +58,7 @@ compiled with clang 3.4 and flags -O3 -mavx
 65536 random elements in std::vector
 
 
-data type  | std::sort | floki aa sort
+data type  | std::sort | floki::sort
 ------------- | ------------- | -------------
 int32_t  | 2.99ms | 0.92ms
 float    | 3.33ms | 1.10ms
