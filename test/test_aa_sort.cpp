@@ -17,6 +17,8 @@ using namespace floki;
 
 using namespace boost::simd;
 
+using boost::tuples::tie;
+
 template <typename element_type> void random_test(size_t elements = 16 * 256)
 {
     std::vector<element_type> values(elements);
@@ -67,8 +69,9 @@ go_bandit([]() {
                                                { 50, 22, 44, 55 },
                                                { 88, 40, 60, 96 } };
 
-            floki::detail::sort_columns(values[0], values[1], values[2],
-                                        values[3]);
+            tie(values[0], values[1], values[2], values[3])
+                = floki::detail::sort_columns(values[0], values[1], values[2],
+                                              values[3]);
 
             AssertThat(values,
                        EqualsContainer(sorted_values, are_packs_equal<pack_t>));
@@ -87,8 +90,10 @@ go_bandit([]() {
                                                 { 24, 6, 4, 3 },
                                                 { 88, 22, 44, 96 } };
 
-            floki::detail::bitmerge2(values[0], values[1]);
-            floki::detail::bitmerge2(values[2], values[3]);
+            tie(values[0], values[1])
+                = floki::detail::bitmerge2(values[0], values[1]);
+            tie(values[2], values[3])
+                = floki::detail::bitmerge2(values[2], values[3]);
 
             AssertThat(values, EqualsContainer(swapped_values,
                                                are_packs_equal<pack_t>));
@@ -108,8 +113,9 @@ go_bandit([]() {
                                                { 30, 40, 44, 50 },
                                                { 55, 60, 88, 96 } };
 
-            floki::detail::bitonic_sort_16(values[0], values[1], values[2],
-                                           values[3]);
+            tie(values[0], values[1], values[2], values[3])
+                = floki::detail::bitonic_sort_16(values[0], values[1],
+                                                 values[2], values[3]);
 
             AssertThat(values,
                        EqualsContainer(sorted_values, are_packs_equal<pack_t>));
@@ -122,7 +128,8 @@ go_bandit([]() {
             std::vector
                 <pack_t> sorted_values{ { 1, 7, 12, 22 }, { 23, 32, 66, 76 } };
 
-            floki::detail::merge_sorted_vectors(values[0], values[1]);
+            tie(values[0], values[1])
+                = floki::detail::merge_sorted_vectors(values[0], values[1]);
 
             AssertThat(values,
                        EqualsContainer(sorted_values, are_packs_equal<pack_t>));

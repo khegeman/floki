@@ -19,6 +19,8 @@
 #include <boost/simd/memory/aligned_input_iterator.hpp>
 #include <boost/simd/memory/aligned_output_iterator.hpp>
 
+#include <boost/tuple/tuple.hpp>
+
 namespace floki
 {
 
@@ -44,6 +46,8 @@ inline void sort(RandomAccessIterator first, RandomAccessIterator last)
 
     using boost::simd::aligned_input_begin;
     using boost::simd::aligned_output_begin;
+
+    using boost::tuples::tie;
 
     using boost::simd::allocator;
 
@@ -79,7 +83,7 @@ inline void sort(RandomAccessIterator first, RandomAccessIterator last)
         pack_t c = *vb++;
         pack_t d = *vb++;
 
-        detail::bitonic_sort_16(a, b, c, d);
+        tie(a, b, c, d) = detail::bitonic_sort_16(a, b, c, d);
         *vo++ = a;
         *vo++ = b;
         *vo++ = c;
