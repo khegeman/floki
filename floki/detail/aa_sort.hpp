@@ -11,9 +11,12 @@ using boost::simd::max;
 using boost::simd::is_less;
 using boost::simd::input_begin;
 using boost::simd::output_begin;
-
+using boost::tuples::tuple;
+using boost::tuples::tie;
+using boost::tuples::make_tuple;
 template <typename simd_type>
-inline void sort_columns(simd_type &a, simd_type &b, simd_type &c, simd_type &d)
+inline tuple<simd_type, simd_type, simd_type, simd_type>
+sort_columns(simd_type a, simd_type b, simd_type c, simd_type d)
 {
 
     // sort columns of 4x4 matrix
@@ -31,10 +34,12 @@ inline void sort_columns(simd_type &a, simd_type &b, simd_type &c, simd_type &d)
 
     b = min(s, t);
     c = max(s, t);
+    return make_tuple(a, b, c, d);
 }
 
 template <typename simd_type>
-inline void transpose4(simd_type &a, simd_type &b, simd_type &c, simd_type &d)
+inline tuple<simd_type, simd_type, simd_type, simd_type>
+transpose4(simd_type a, simd_type b, simd_type c, simd_type d)
 {
 
     simd_type x = interleave_first(a, b);
@@ -46,10 +51,12 @@ inline void transpose4(simd_type &a, simd_type &b, simd_type &c, simd_type &d)
     b = shuffle<2, 3, 6, 7>(x, z);
     c = shuffle<0, 1, 4, 5>(y, w);
     d = shuffle<2, 3, 6, 7>(y, w);
+    return make_tuple(a, b, c, d);
 }
 
 template <typename simd_type>
-inline void merge_sorted_vectors(simd_type &a, simd_type &b)
+inline tuple<simd_type, simd_type> merge_sorted_vectors(simd_type a,
+                                                        simd_type b)
 {
     simd_type A = min(a, b);
     simd_type B = max(a, b);
@@ -68,10 +75,12 @@ inline void merge_sorted_vectors(simd_type &a, simd_type &b)
 
     a = shuffle<0, 1, 5, 2>(min3, max3);
     b = shuffle<6, 3, 7, 4>(min3, max3);
+    return make_tuple(a, b);
 }
 
 template <typename simd_type>
-inline void bitmerge3(simd_type &a, simd_type &b, simd_type &c, simd_type &d)
+inline tuple<simd_type, simd_type, simd_type, simd_type>
+bitmerge3(simd_type a, simd_type b, simd_type c, simd_type d)
 {
     simd_type cr = reverse(c);
     simd_type dr = reverse(d);
@@ -80,17 +89,17 @@ inline void bitmerge3(simd_type &a, simd_type &b, simd_type &c, simd_type &d)
     d = max(b, cr);
     a = min(a, dr);
     b = min(b, cr);
+    return make_tuple(a, b, c, d);
 }
 
-// same as compare_swap from aA sort
-template <typename simd_type> inline void bitmerge2(simd_type &a, simd_type &b)
+// same as compare_swap from aa sort
+template <typename simd_type>
+tuple<simd_type, simd_type> bitmerge2(simd_type a, simd_type b)
 {
-    simd_type ta = min(a, b);
-    b = max(a, b);
-    a = ta;
+    return make_tuple(min(a, b), max(a, b));
 }
 
-template <typename simd_type> inline void bitmerge1(simd_type &XYZW)
+template <typename simd_type> inline simd_type bitmerge1(simd_type XYZW)
 {
     simd_type ZWXY = shuffle<2, 3, 0, 1>(XYZW);
     simd_type min1 = min(XYZW, ZWXY);
@@ -101,43 +110,21 @@ template <typename simd_type> inline void bitmerge1(simd_type &XYZW)
     simd_type min2 = min(XYAB, YXBA);
     simd_type max2 = max(XYAB, YXBA);
 
-    XYZW = shuffle<0, 4, 2, 6>(min2, max2);
+    return shuffle<0, 4, 2, 6>(min2, max2);
 }
 
 template <typename simd_type>
-inline void bitonic_merge(simd_type &a, simd_type &b, simd_type &c,
-                          simd_type &d)
+inline tuple<simd_type, simd_type, simd_type, simd_type>
+bitonic_merge(simd_type a, simd_type b, simd_type c, simd_type d)
 {
-    bitmerge3(a, b, c, d);
-    bitmerge2(a, b);
-    bitmerge2(c, d);
-    bitmerge1(a);
-    bitmerge1(b);
-    bitmerge1(c);
-    bitmerge1(d);
-}
-
-template <typename iterator_type>
-inline void merge_and_write(iterator_type &dest,
-                            typename iterator_type::value_type &a1,
-                            typename iterator_type::value_type &a2,
-                            typename iterator_type::value_type b1,
-                            typename iterator_type::value_type b2)
-{
-    bitonic_merge(a1, a2, b1, b2);
-    *dest++ = a1;
-    *dest++ = a2;
-    a1 = b1;
-    a2 = b2;
-}
-
-template <typename iterator_type>
-inline void read_and_move_iterator(iterator_type &iter,
-                                   typename iterator_type::value_type &value_1,
-                                   typename iterator_type::value_type &value_2)
-{
-    value_1 = *iter++;
-    value_2 = *iter++;
+    tie(a, b, c, d) = bitmerge3(a, b, c, d);
+    tie(a, b) = bitmerge2(a, b);
+    tie(c, d) = bitmerge2(c, d);
+    a = bitmerge1(a);
+    b = bitmerge1(b);
+    c = bitmerge1(c);
+    d = bitmerge1(d);
+    return make_tuple(a, b, c, d);
 }
 
 template <typename input_type, typename output_type>
@@ -148,17 +135,19 @@ inline void merge_sort(input_type a, input_type b, output_type dest,
     auto a_end = a + merge_size;
     auto b_end = b + merge_size;
 
-    simd_type_t a1;
-    simd_type_t a2;
-    read_and_move_iterator(a, a1, a2);
+    simd_type_t a1 = *a++;
+    simd_type_t a2 = *a++;
 
-    simd_type_t b1;
-    simd_type_t b2;
-    read_and_move_iterator(b, b1, b2);
+    simd_type_t b1 = *b++;
+    simd_type_t b2 = *b++;
 
     do {
 
-        merge_and_write(dest, a1, a2, b1, b2);
+        tie(a1, a2, b1, b2) = bitonic_merge(a1, a2, b1, b2);
+        *dest++ = a1;
+        *dest++ = a2;
+        a1 = b1;
+        a2 = b2;
 
         // reference the underlying iterator
         if ((*a.base()) < (*b.base())) {
@@ -171,15 +160,29 @@ inline void merge_sort(input_type a, input_type b, output_type dest,
 
     } while (a != a_end && b != b_end);
 
-    merge_and_write(dest, a1, a2, b1, b2);
+    tie(a1, a2, b1, b2) = bitonic_merge(a1, a2, b1, b2);
+    *dest++ = a1;
+    *dest++ = a2;
+    a1 = b1;
+    a2 = b2;
 
     while (a != a_end) {
-        read_and_move_iterator(a, b1, b2);
-        merge_and_write(dest, a1, a2, b1, b2);
+        b1 = *a++;
+        b2 = *a++;
+        tie(a1, a2, b1, b2) = bitonic_merge(a1, a2, b1, b2);
+        *dest++ = a1;
+        *dest++ = a2;
+        a1 = b1;
+        a2 = b2;
     }
     while (b != b_end) {
-        read_and_move_iterator(b, b1, b2);
-        merge_and_write(dest, a1, a2, b1, b2);
+        b1 = *b++;
+        b2 = *b++;
+        tie(a1, a2, b1, b2) = bitonic_merge(a1, a2, b1, b2);
+        *dest++ = a1;
+        *dest++ = a2;
+        a1 = b1;
+        a2 = b2;
     }
 
     *dest++ = a1;
@@ -187,18 +190,18 @@ inline void merge_sort(input_type a, input_type b, output_type dest,
 }
 
 template <typename simd_type>
-inline void bitonic_sort_16(simd_type &a, simd_type &b, simd_type &c,
-                            simd_type &d)
+inline tuple<simd_type, simd_type, simd_type, simd_type>
+bitonic_sort_16(simd_type a, simd_type b, simd_type c, simd_type d)
 {
 
     // sort 16 values
 
-    sort_columns(a, b, c, d);
-    transpose4(a, b, c, d);
+    tie(a, b, c, d) = sort_columns(a, b, c, d);
+    tie(a, b, c, d) = transpose4(a, b, c, d);
 
-    merge_sorted_vectors(a, b);
-    merge_sorted_vectors(c, d);
-    bitonic_merge(a, b, c, d);
+    tie(a, b) = merge_sorted_vectors(a, b);
+    tie(c, d) = merge_sorted_vectors(c, d);
+    return bitonic_merge(a, b, c, d);
 }
 
 template <class InputIterator, class OutputIterator>
