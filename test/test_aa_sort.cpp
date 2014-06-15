@@ -4,6 +4,7 @@ using namespace bandit;
 #include <algorithm>
 #include <limits>
 #include <vector>
+#include <random>
 #include <floki/aa_sort.hpp>
 #include <boost/simd/memory/input_iterator.hpp>
 #include <boost/simd/memory/output_iterator.hpp>
@@ -77,7 +78,7 @@ go_bandit([]() {
                        EqualsContainer(sorted_values, are_packs_equal<pack_t>));
         });
 
-        it("test compare and swap", [&]() {
+        it("test minmax", [&]() {
             using pack_t = pack<int32_t, 4>;
 
             std::vector<pack_t> values{ { 50, 40, 30, 20 },
@@ -91,9 +92,9 @@ go_bandit([]() {
                                                 { 88, 22, 44, 96 } };
 
             tie(values[0], values[1])
-                = floki::detail::bitmerge2(values[0], values[1]);
+                = floki::detail::minmax(values[0], values[1]);
             tie(values[2], values[3])
-                = floki::detail::bitmerge2(values[2], values[3]);
+                = floki::detail::minmax(values[2], values[3]);
 
             AssertThat(values, EqualsContainer(swapped_values,
                                                are_packs_equal<pack_t>));
