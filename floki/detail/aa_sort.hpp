@@ -14,26 +14,43 @@ using boost::simd::output_begin;
 using boost::tuples::tuple;
 using boost::tuples::tie;
 using boost::tuples::make_tuple;
+
+/**
+ * simd minmax
+ * returns a 2 element tuple where the elements are defined as follows.
+ * min(a,b) = (min(a[0],b[0]),min(a[1],b[1]) ...min(a[n],b[n]) )
+ * max(a,b) = (max(a[0],b[0]),max(a[1],b[1]) ...max(a[n],b[n]) )
+ */
+template <typename simd_type>
+inline tuple<simd_type, simd_type> minmax(simd_type a, simd_type b)
+{
+    return make_tuple(min(a, b), max(a, b));
+}
+
+/**
+ * sort columns
+ * returns a 4 element tuple (a',b',c',d') where each element is sorted such
+ * that
+ * a'[0] <= a'[1] <= a'[2] <= a'[3]
+ * b'[0] <= b'[1] <= b'[2] <= b'[3]
+ * c'[0] <= c'[1] <= c'[2] <= c'[3]
+ * d'[0] <= d'[1] <= d'[2] <= d'[3]
+ */
 template <typename simd_type>
 inline tuple<simd_type, simd_type, simd_type, simd_type>
 sort_columns(simd_type a, simd_type b, simd_type c, simd_type d)
 {
+    simd_type minab, maxab, mincd, maxcd, s, t;
 
     // sort columns of 4x4 matrix
-    simd_type minab = min(a, b);
-    simd_type maxab = max(a, b);
-    simd_type mincd = min(c, d);
-    simd_type maxcd = max(c, d);
+    tie(minab, maxab) = minmax(a, b);
+    tie(mincd, maxcd) = minmax(c, d);
 
-    a = min(minab, mincd);
+    tie(a, s) = minmax(minab, mincd);
+    tie(t, d) = minmax(maxab, maxcd);
 
-    d = max(maxab, maxcd);
+    tie(b, c) = minmax(s, t);
 
-    simd_type s = max(minab, mincd);
-    simd_type t = min(maxab, maxcd);
-
-    b = min(s, t);
-    c = max(s, t);
     return make_tuple(a, b, c, d);
 }
 
@@ -54,24 +71,30 @@ transpose4(simd_type a, simd_type b, simd_type c, simd_type d)
     return make_tuple(a, b, c, d);
 }
 
+/*
+ * SIMD merge sort routine for 4 element vectors
+ * given 2 simd vectors where
+ * a[0] <= a[1] <= a[2] <= a[3] and
+ * b[0] <= b[1] <= b[2] <= b[3]
+ * this function returns a 2 element tuple (a',b') such that
+ * a'[0] <= a'[1] <= a'[2] <= a'[3] <= a'[4] <= b'[0] <= b'[1] <= b'[2] <= b'[3]
+ */
 template <typename simd_type>
 inline tuple<simd_type, simd_type> merge_sorted_vectors(simd_type a,
                                                         simd_type b)
 {
-    simd_type A = min(a, b);
-    simd_type B = max(a, b);
+    simd_type A, B, min2, max2, min3, max3;
+
+    tie(A, B) = minmax(a, b);
 
     B = shuffle<2, 3, 0, 1>(B);
 
-    simd_type min2 = min(A, B);
-    simd_type max2 = max(A, B);
+    tie(min2, max2) = minmax(A, B);
 
     A = shuffle<0, 1, 3, 7>(min2, max2);
-
     B = shuffle<5, 2, 6, 4>(min2, max2);
 
-    simd_type min3 = min(A, B);
-    simd_type max3 = max(A, B);
+    tie(min3, max3) = minmax(A, B);
 
     a = shuffle<0, 1, 5, 2>(min3, max3);
     b = shuffle<6, 3, 7, 4>(min3, max3);
@@ -85,30 +108,24 @@ bitmerge3(simd_type a, simd_type b, simd_type c, simd_type d)
     simd_type cr = reverse(c);
     simd_type dr = reverse(d);
 
-    c = max(a, dr);
-    d = max(b, cr);
-    a = min(a, dr);
-    b = min(b, cr);
-    return make_tuple(a, b, c, d);
-}
+    tie(a, c) = minmax(a, dr);
+    tie(b, d) = minmax(b, cr);
 
-// same as compare_swap from aa sort
-template <typename simd_type>
-tuple<simd_type, simd_type> bitmerge2(simd_type a, simd_type b)
-{
-    return make_tuple(min(a, b), max(a, b));
+    return make_tuple(a, b, c, d);
 }
 
 template <typename simd_type> inline simd_type bitmerge1(simd_type XYZW)
 {
+    simd_type min1, max1, min2, max2;
+
     simd_type ZWXY = shuffle<2, 3, 0, 1>(XYZW);
-    simd_type min1 = min(XYZW, ZWXY);
-    simd_type max1 = max(XYZW, ZWXY);
+
+    tie(min1, max1) = minmax(XYZW, ZWXY);
 
     simd_type XYAB = shuffle<0, 1, 4, 5>(min1, max1);
     simd_type YXBA = shuffle<1, 0, 5, 4>(min1, max1);
-    simd_type min2 = min(XYAB, YXBA);
-    simd_type max2 = max(XYAB, YXBA);
+
+    tie(min2, max2) = minmax(XYAB, YXBA);
 
     return shuffle<0, 4, 2, 6>(min2, max2);
 }
@@ -118,8 +135,9 @@ inline tuple<simd_type, simd_type, simd_type, simd_type>
 bitonic_merge(simd_type a, simd_type b, simd_type c, simd_type d)
 {
     tie(a, b, c, d) = bitmerge3(a, b, c, d);
-    tie(a, b) = bitmerge2(a, b);
-    tie(c, d) = bitmerge2(c, d);
+    // bitmerge2 is the same as minmax
+    tie(a, b) = minmax(a, b);
+    tie(c, d) = minmax(c, d);
     a = bitmerge1(a);
     b = bitmerge1(b);
     c = bitmerge1(c);
