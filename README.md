@@ -45,7 +45,7 @@ There are some known issues with g++ and Boost SIMD.  See the comments about ali
 
 [Boost SIMD](http://nt2.metascale.fr/doc/html/the_boost_simd_library.html)
 
-
+Optional unit tests require the [Bandit](http://banditcpp.org/)
 ## Benchmark
 
 
@@ -62,3 +62,22 @@ data type  | std::sort | floki::sort
 ------------- | ------------- | -------------
 int32_t  | 2.99ms | 0.92ms
 float    | 3.33ms | 1.10ms
+
+## Building
+
+There is a CMake build file included that builds the benchmark and unit tests. 
+
+I generate the make file using clang as follows
+
+```
+mkdir build-floki
+cd build-floki
+CXX=/usr/bin/clang++-3.4 cmake ~/source/floki
+
+make
+```
+
+If Boost SIMD is installed to a path other than /usr/local, then set BoostSIMD_INCLUDE_DIR accordingly.
+
+
+
