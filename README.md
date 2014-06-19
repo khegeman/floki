@@ -72,7 +72,7 @@ I generate the make file using clang as follows
 ```
 mkdir build-floki
 cd build-floki
-CXX=/usr/bin/clang++-3.4 cmake ~/source/floki
+CXX=/usr/bin/clang++-3.4 cmake ~/source/floki -DCMAKE_CXX_FLAGS="-march=native"
 
 make
 ```
