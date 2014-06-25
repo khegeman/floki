@@ -151,9 +151,33 @@ go_bandit([]() {
             auto sorted_values = values;
             std::sort(begin(sorted_values), end(sorted_values));
 
-            floki::detail::merge_sort(va, vb, vo, 4);
+            floki::detail::merge_sort(va, vb, vo, 4, 4);
 
             AssertThat(values, EqualsContainer(sorted_values));
+        });
+
+        it("test merge sort uneven", [&]() {
+
+            std::vector<int32_t> values
+                = { 0,    4,    6,    20,   40,   60,   90,   155,
+                    1188, 2002, 2244, 2296, 3124, 3226, 3334, 4443,
+                    11188, 12002, 12244, 12296, 13124, 13226, 13334, 14443,
+                    21188, 22002, 22244, 22296, 23124, 23226, 23334, 24443,
+                    10,   24,   46,   120,  140,  260,  390,  455,
+                    2188, 3002, 4244, 5296, 6124, 6226, 6334, 6443, };
+
+            auto sorted_values = values;
+            std::sort(begin(sorted_values), end(sorted_values));
+
+            auto va = input_begin<4>(begin(values));
+            auto vb = input_begin<4>(begin(values) + 32);
+
+            auto output_values = values;
+            auto vo = output_begin<4>(begin(output_values));
+
+            floki::detail::merge_sort(va, vb, vo, 8, 4);
+
+            AssertThat(output_values, EqualsContainer(sorted_values));
         });
 
         it("test sort reverse sorted array", [&]() {
@@ -187,6 +211,24 @@ go_bandit([]() {
 
             AssertThat(values, EqualsContainer(sorted_values));
         });
+
+        it("test sort random int32_t 112",
+           [&]() { random_test<int32_t>(112); });
+
+        it("test sort random int32_t 96",
+           [&]() { random_test<int32_t>(96); });
+
+        it("test sort random int32_t 97",
+           [&]() { random_test<int32_t>(97); });
+
+        it("test sort random int32_t 111",
+           [&]() { random_test<int32_t>(111); });
+
+        it("test sort random int32_t 144",
+           [&]() { random_test<int32_t>(144); });
+
+        it("test sort random int32_t 176",
+           [&]() { random_test<int32_t>(176); });
 
         it("test sort random int32_t 128",
            [&]() { random_test<int32_t>(256); });
