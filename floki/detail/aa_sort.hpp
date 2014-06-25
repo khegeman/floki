@@ -1,16 +1,15 @@
 #pragma once
 
-using boost::simd::interleave_first;
-using boost::simd::interleave_second;
+// using boost::simd::interleave_first;
+// using boost::simd::interleave_second;
 using boost::simd::shuffle;
-using boost::simd::pack;
-using boost::simd::reverse;
-using boost::simd::broadcast;
-using boost::simd::min;
-using boost::simd::max;
-using boost::simd::is_less;
-using boost::simd::input_begin;
-using boost::simd::output_begin;
+// using boost::simd::reverse;
+// using boost::simd::broadcast;
+// using boost::simd::min;
+// using boost::simd::max;
+// using boost::simd::is_less;
+// using boost::simd::input_begin;
+// using boost::simd::output_begin;
 using boost::tuples::tuple;
 using boost::tuples::tie;
 using boost::tuples::make_tuple;
@@ -145,13 +144,19 @@ bitonic_merge(simd_type a, simd_type b, simd_type c, simd_type d)
     return make_tuple(a, b, c, d);
 }
 
+/**
+ * this function does not work inplace if a_merge_size != b_merge_size
+ */
 template <typename input_type, typename output_type>
 inline void merge_sort(input_type a, input_type b, output_type dest,
-                       uint32_t merge_size)
+                       size_t a_merge_size, size_t b_merge_size)
 {
+    assert(a_merge_size >= 4);
+    assert(b_merge_size >= 4);
+
     using simd_type_t = typename input_type::value_type;
-    auto a_end = a + merge_size;
-    auto b_end = b + merge_size;
+    auto a_end = a + a_merge_size;
+    auto b_end = b + b_merge_size;
 
     simd_type_t a1 = *a++;
     simd_type_t a2 = *a++;
@@ -193,6 +198,7 @@ inline void merge_sort(input_type a, input_type b, output_type dest,
         a1 = b1;
         a2 = b2;
     }
+
     while (b != b_end) {
         b1 = *b++;
         b2 = *b++;
@@ -223,15 +229,35 @@ bitonic_sort_16(simd_type a, simd_type b, simd_type c, simd_type d)
 }
 
 template <class InputIterator, class OutputIterator>
-inline size_t merge_pass(InputIterator input, OutputIterator output,
-                         size_t elements, size_t merge_size)
+inline size_t merge_pass(InputIterator input,
+                                        OutputIterator output, size_t elements,
+                                        size_t merge_size, size_t remainder)
 {
 
     size_t i = 0;
-    for (; i < elements / 4 - merge_size; i += 2 * merge_size) {
+    for (; i <= elements / 4 - 2 * merge_size; i += 2 * merge_size) {
         detail::merge_sort(input + i, input + (i + merge_size), output + i,
-                           merge_size);
+                           merge_size, merge_size);
+    }
+    //if there are an odd number of sort blocks, there will be a remainder.
+    size_t remain = i < (elements / 4) - remainder ? merge_size : 0;
+
+    //if there is a previous remainder from another pass
+    if (remainder) {
+        if (remain) {
+            // merge the previous remainder and the current to form a new sorted remainder
+            detail::merge_sort(input + i, input + (i + merge_size), output + i,
+                               merge_size, remainder);
+            remainder += merge_size;
+        } else {
+            // copy previous remainder to output buffer
+            std::copy(input + i, input + i + remainder, output + i);
+        }
+    } else {
+        //copy the remaining sort block to the output array so that it can be merged later
+        std::copy(input + i, input + i + remain, output + i);
+        remainder = remain;
     }
 
-    return merge_size * 2;
+    return remainder;
 }
