@@ -12,6 +12,8 @@ add_executable(test_find_if test_find_if.cpp)
 
 enable_testing()
 add_test(NAME aa_sort COMMAND test_aa_sort)
+add_test(NAME kary COMMAND test_kary)
+add_test(NAME find_if COMMAND test_find_if)
 endif(BANDIT_DIR)
  
 
