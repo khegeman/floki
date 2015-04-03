@@ -4,6 +4,7 @@
 #include <chrono>
 #include <iostream>
 #include <random>
+#include <functional>
 
 #ifdef SIMD_BENCH
 #include <floki/aa_sort.hpp>
